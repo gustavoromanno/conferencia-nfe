@@ -74,10 +74,11 @@ Corrigi a **leitura** (formatos do número do pedido, eventos da SEFAZ, XML repe
 | Detecção (recall) | 100% | 100% |
 | Detecção (precisão) | 100% | 100% |
 | Causa provável pelas **regras** | 105/105 (100%) | **85/165 (52%)** |
-| Causa provável pela **IA** | 105/105 (100%) | **134/165 (81%)** |
-| Custo da IA por conferência (claude-opus-5-5) | US$ 0,082 | US$ 0,132 |
-| Tempo da IA por conferência | 25 s | 38 s |
-| Tokens por conferência (entrada / saída) | 5149 / 3074 | 7831 / 5011 |
+| Causa provável pela **IA** (1º prompt) | 105/105 (100%) | 134/165 (81%) |
+| Causa provável pela **IA** (prompt atual) | 105/105 (100%) | **146/165 (88%)** |
+| Custo da IA por conferência (claude-opus-5-5) | US$ 0,083 | US$ 0,138 |
+| Tempo da IA por conferência | 23 s | 40 s |
+| Tokens por conferência (entrada / saída) | 5428 / 3057 | 8110 / 5297 |
 
 ### Onde as regras erram (de propósito)
 
@@ -95,26 +96,28 @@ Parte disso daria para resolver com mais regras (desconto e taxa juntos, arredon
 
 ### O que a IA acrescentou, e onde ainda erra
 
-No conjunto realista, por causa, nas 5 sementes:
+No conjunto realista, por causa, nas 5 sementes. Cada prompt rodou uma vez por semente.
 
-| Causa real | Regras | IA |
-|---|---|---|
-| Arredondamento no rateio | 0/10 | **10/10** |
-| Desconto e taxa fora da nota | 0/10 | **10/10** |
-| Cancelamento rejeitado pela SEFAZ | 0/5 | **5/5** |
-| Item faltando na nota | 0/10 | **9/10** |
-| Preço desatualizado no emissor | 0/10 | 7/10 |
-| Item lançado duas vezes | 0/15 | 8/15 |
-| Número do pedido errado ou ausente na nota | 0/20 | 10/20 |
-| Nota sem vínculo com pedido (venda de balcão) | **10/10** | 0/10 |
-| Demais causas (as do conjunto básico) | 75/75 | 75/75 |
+| Causa real | Regras | IA, 1º prompt | IA, prompt atual |
+|---|---|---|---|
+| Arredondamento no rateio | 0/10 | 10/10 | 10/10 |
+| Desconto e taxa fora da nota | 0/10 | 10/10 | 10/10 |
+| Cancelamento rejeitado pela SEFAZ | 0/5 | 5/5 | 5/5 |
+| Número do pedido errado ou ausente na nota | 0/20 | 10/20 | **20/20** |
+| Nota sem vínculo com pedido (venda de balcão) | 10/10 | 0/10 | **10/10** |
+| Item faltando na nota | 0/10 | 9/10 | 8/10 |
+| Item lançado duas vezes | 0/15 | 8/15 | 6/15 |
+| Preço desatualizado no emissor | 0/10 | 7/10 | **2/10** |
+| Demais causas (as do conjunto básico) | 75/75 | 75/75 | 75/75 |
+| **Total** | 85/165 | 134/165 | **146/165** |
 
-- **Onde a IA ganhou:** casos que pedem conta ou leitura dos eventos (arredondamento de centavos, desconto e taxa juntos, cancelamento rejeitado) e casos em que comparar os itens do pedido com os da nota resolve (item faltando, preço desatualizado).
-- **Número do pedido:** em cada semente há dois casos (um com o número errado, outro sem número). A IA liga a nota sem pedido ao pedido sem nota em um deles e trata o outro como "nota sem vínculo". Provavelmente liga o número com dígito trocado e não o ausente, mas isso ainda precisa ser confirmado nas explicações.
-- **Item lançado duas vezes:** acerta pouco mais da metade. Nos erros, responde "outra", e uma vez confundiu com preço desatualizado. Em nenhum caso caiu na armadilha do desconto, que as regras não evitam.
-- **Piorou em um ponto:** nas notas avulsas de balcão, que as regras acertam, a IA responde "outra" em todas. Ainda não li as explicações para saber se ela reconheceu a venda de balcão e só não achou que a categoria servia, ou se errou de fato. A categoria precisa de uma descrição mais clara no prompt.
+- **Onde a IA ganhou:** nos casos que pedem conta ou leitura dos eventos: arredondamento de centavos, desconto e taxa juntos e cancelamento rejeitado.
+- **O que a mudança no prompt resolveu:** o 1º prompt tratava cada divergência isolada. O prompt atual pede que a IA ligue um pedido sem nota a uma nota sem pedido com o mesmo valor e horário próximo, e que chame de "nota sem vínculo" a nota que não forma par. Isso zerou os 20 erros desses dois grupos.
+- **O que continua errado:** todos os 19 erros restantes são de `VALOR_DIVERGENTE` em que a diferença não vem de desconto nem de taxa (item a mais, item faltando, preço antigo). A queda em "preço desatualizado" (7/10 para 2/10) parece mais acaso do que efeito do prompt. Os fatos de `VALOR_DIVERGENTE` levam só os totais (valor, desconto, taxa), **não os itens**. Sem os itens, a IA só consegue chutar a causa pelo tamanho da diferença, e na maioria das vezes responde "outra", que é o honesto.
 
-**Custo:** cerca de US$ 0,13 e 38 s por conferência no realista, contra zero das regras. A IA subiu o acerto da causa de 52% para 81%. A detecção continua nas regras, então o custo da IA só paga a explicação.
+**Próximo passo:** mandar para a IA os itens do pedido e da nota em `VALOR_DIVERGENTE`. Com eles, item a mais, item faltando e preço antigo deixam de ser palpite. Isso aumenta os tokens de entrada; o custo precisa ser medido de novo.
+
+**Custo:** cerca de US$ 0,14 e 40 s por conferência no realista, contra zero das regras. A IA subiu o acerto da causa de 52% para 88%. A detecção continua nas regras, então o custo da IA só paga a explicação.
 
 **Limites, com honestidade:** os dois conjuntos são sintéticos e foram escritos por quem escreveu as regras. O conjunto realista tem casos que as regras de causa não foram ajustadas para ver, mas ainda é um gerador meu. O próximo passo é testar com XMLs reais anonimizados.
 
