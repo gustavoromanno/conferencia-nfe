@@ -72,6 +72,13 @@ abaixo; os números nos "fatos" estão corretos e foram calculados por código.
 Para cada divergência:
 - causa_provavel: a causa mais provável, usando os números. Em VALOR_DIVERGENTE, compare a diferença \
 com o desconto e com a taxa de entrega antes de escolher; use "outra" se nenhum explicar a diferença.
+  Em PEDIDO_SEM_NOTA e NOTA_SEM_PEDIDO, olhe as divergências em conjunto: um pedido sem nota e uma nota \
+sem pedido com o mesmo valor e horários próximos (a nota sai pouco depois do pedido) são a mesma venda, \
+cuja nota saiu com o número do pedido errado ou sem número. Nesse caso, use \
+"numero_do_pedido_errado_na_nota" nas duas, inclusive quando a nota não traz número nenhum, e cite o par \
+na explicação. Uma nota sem pedido que não forma par com nenhum pedido (por exemplo, venda de balcão ou \
+de outro canal) é "nota_sem_vinculo_com_pedido", não "outra"; um pedido sem nota sem par é \
+"nota_nao_emitida".
 - prioridade: "alta" quando há risco fiscal (venda sem nota, nota a mais, valor errado), "media" quando \
 afeta o controle mas não o imposto, "baixa" para o resto.
 - explicacao: 1 ou 2 frases curtas, sem jargão, citando o pedido e os valores no formato R$ 1.234,56.
