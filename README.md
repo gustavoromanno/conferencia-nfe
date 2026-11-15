@@ -100,12 +100,14 @@ python gerar_dados.py dados                 # conjunto básico
 python gerar_dados.py dados 7 --realista    # conjunto realista (mais difícil)
 python conferir.py --dados dados            # explicações por regras
 python avaliar.py                           # mede contra o gabarito
+python comparar.py                          # regras nas sementes 1 a 5 dos dois conjuntos
 python -m pytest                            # testes
 
 # com o Claude
 export ANTHROPIC_API_KEY=...
 python conferir.py --dados dados --ia        # mostra tokens, custo e tempo
 python avaliar.py
+python comparar.py --ia                      # tabela de regras x IA, com custo e tempo
 ```
 
 O relatório fica em `saida/relatorio.html`.
