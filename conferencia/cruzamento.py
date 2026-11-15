@@ -20,6 +20,12 @@ def chave_valida(chave: str) -> bool:
     return len(chave) == 44 and chave.isdigit() and digito_verificador(chave[:43]) == int(chave[43])
 
 
+def _item(item) -> str:
+    """'2 x Combo família a 89.90': compacto para gastar poucos tokens."""
+    qtd = item.quantidade.normalize()
+    return f"{qtd:f} x {item.descricao} a {item.valor_unitario:.2f}"
+
+
 def conferir(pedidos: list[Pedido], notas: list[Nota]) -> list[Divergencia]:
     achados: list[tuple] = []
     por_pedido: dict[str, list[Nota]] = defaultdict(list)
@@ -72,6 +78,9 @@ def conferir(pedidos: list[Pedido], notas: list[Nota]) -> list[Divergencia]:
                 "desconto_nota": nota.desconto,
                 "taxa_entrega_pedido": pedido.taxa_entrega,
                 "frete_nota": nota.frete,
+                # os itens deixam a IA achar item a mais, item faltando ou preço diferente
+                "itens_pedido": [_item(i) for i in pedido.itens],
+                "itens_nota": [_item(i) for i in nota.itens],
             }))
 
     return [Divergencia(id=f"D{i:02d}", tipo=t, pedido_id=p, chaves=c, fatos=f)

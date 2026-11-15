@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal as D
 
 from conferencia.cruzamento import chave_valida, conferir, digito_verificador
-from conferencia.modelos import Nota, Pedido
+from conferencia.modelos import Item, Nota, Pedido
 
 AGORA = datetime(2026, 11, 2, 12, 0)
 
@@ -53,6 +53,16 @@ def test_valor_divergente_guarda_os_fatos():
     assert d.tipo == "VALOR_DIVERGENTE"
     assert d.fatos["diferenca"] == D("5.00")
     assert d.fatos["desconto_pedido"] == D("5.00")
+
+
+def test_valor_divergente_leva_os_itens_dos_dois_lados():
+    p = pedido(total="54.00")
+    p.itens = [Item("Pudim", D("2"), D("12.00"), D("24.00")), Item("Açaí 500ml", D("1"), D("30.00"), D("30.00"))]
+    n = nota(valor="42.00")
+    n.itens = [Item("SOBREMESA PUDIM", D("2.0000"), D("12"), D("24.00")), Item("ACAI 500ML", D("1.0000"), D("18"), D("18.00"))]
+    [d] = conferir([p], [n])
+    assert d.fatos["itens_pedido"] == ["2 x Pudim a 12.00", "1 x Açaí 500ml a 30.00"]
+    assert d.fatos["itens_nota"] == ["2 x SOBREMESA PUDIM a 12.00", "1 x ACAI 500ML a 18.00"]
 
 
 def test_centavo_de_diferenca_conta():

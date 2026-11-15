@@ -71,7 +71,13 @@ abaixo; os números nos "fatos" estão corretos e foram calculados por código.
 
 Para cada divergência:
 - causa_provavel: a causa mais provável, usando os números. Em VALOR_DIVERGENTE, compare a diferença \
-com o desconto e com a taxa de entrega antes de escolher; use "outra" se nenhum explicar a diferença.
+com o desconto e com a taxa de entrega antes de escolher. Depois compare os itens do pedido com os da \
+nota: os nomes vêm de sistemas diferentes (app e emissor) e não são iguais, então pareie pelo sentido e \
+pelo preço. Um produto do pedido repetido na nota ou com quantidade maior é \
+"item_lancado_em_duplicidade"; um produto do pedido que não está na nota é "item_faltando_na_nota"; o \
+mesmo produto com preço unitário diferente é "preco_desatualizado_no_emissor". A diferença pode \
+coincidir com o desconto ou a taxa por acaso: se os itens mostram outra causa, fique com os itens. Use \
+"outra" se nada disso explicar a diferença, inclusive quando a nota tem um produto que não existe no pedido.
   Em PEDIDO_SEM_NOTA e NOTA_SEM_PEDIDO, olhe as divergências em conjunto: um pedido sem nota e uma nota \
 sem pedido com o mesmo valor e horários próximos (a nota sai pouco depois do pedido) são a mesma venda, \
 cuja nota saiu com o número do pedido errado ou sem número. Nesse caso, use \
@@ -94,7 +100,7 @@ def _para_json(divergencias: list[Divergencia]) -> str:
     dados = [{"divergencia_id": d.id, "tipo": d.tipo, "descricao_tipo": TIPOS[d.tipo],
               "pedido_id": d.pedido_id, "chaves": d.chaves,
               "fatos": {k: conv(v) for k, v in d.fatos.items()}} for d in divergencias]
-    return json.dumps(dados, ensure_ascii=False, indent=1)
+    return json.dumps(dados, ensure_ascii=False, indent=1, default=conv)
 
 
 def brl(valor: Decimal) -> str:
