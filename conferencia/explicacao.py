@@ -6,6 +6,7 @@ em linguagem simples. Sem chave de API, um modo por regras gera a mesma estrutur
 """
 import json
 import os
+import time
 from decimal import Decimal
 from typing import Literal
 
@@ -14,6 +15,22 @@ from pydantic import BaseModel
 from .modelos import TIPOS, Divergencia
 
 MODELO = os.environ.get("CONFERENCIA_MODELO", "claude-opus-5-5")
+
+# US$ por milhão de tokens (entrada, saída), tabela pública da Anthropic em nov/2026.
+PRECOS = {
+    "claude-opus-5-5": (4.00, 20.00),
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-haiku-5-5": (0.10, 0.50),
+}
+
+
+def medir_uso(usage, modelo: str, segundos: float) -> dict:
+    """Tokens, custo estimado e tempo de uma chamada. Custo None se o modelo não está na tabela."""
+    entrada, saida = usage.input_tokens, usage.output_tokens
+    preco = PRECOS.get(modelo)
+    custo = (entrada * preco[0] + saida * preco[1]) / 1_000_000 if preco else None
+    return {"modelo": modelo, "tokens_entrada": entrada, "tokens_saida": saida,
+            "custo_usd": custo, "segundos": round(segundos, 2)}
 
 Causa = Literal[
     "desconto_fora_da_nota",
@@ -24,6 +41,14 @@ Causa = Literal[
     "nota_sem_vinculo_com_pedido",
     "pedido_cancelado_apos_emissao",
     "chave_digitada_ou_gerada_errada",
+    # causas que só aparecem no conjunto realista; as regras não sabem identificá-las
+    "desconto_e_taxa_fora_da_nota",
+    "arredondamento_no_rateio",
+    "item_lancado_em_duplicidade",
+    "item_faltando_na_nota",
+    "preco_desatualizado_no_emissor",
+    "numero_do_pedido_errado_na_nota",
+    "cancelamento_rejeitado_pela_sefaz",
     "outra",
 ]
 
@@ -98,10 +123,14 @@ def explicar_por_regras(d: Divergencia) -> Explicacao:
     return Explicacao(divergencia_id=d.id, prioridade=prio, causa_provavel=causa, explicacao=txt, acao=acao)
 
 
-def explicar_com_ia(divergencias: list[Divergencia]) -> tuple[list[Explicacao], str]:
+def explicar_com_ia(divergencias: list[Divergencia]) -> tuple[list[Explicacao], str, dict | None]:
     """Uma única chamada ao Claude para todas as divergências. Volta às regras se algo falhar."""
     import anthropic
 
+    def regras(motivo):
+        return [explicar_por_regras(d) for d in divergencias], f"regras ({motivo})", None
+
+    inicio = time.perf_counter()
     try:
         client = anthropic.Anthropic()
         resposta = client.messages.parse(
@@ -116,30 +145,33 @@ def explicar_com_ia(divergencias: list[Divergencia]) -> tuple[list[Explicacao], 
         # A biblioteca levanta TypeError quando não encontra nenhuma credencial.
         if "authentication" not in str(e):
             raise
-        return [explicar_por_regras(d) for d in divergencias], "regras (nenhuma chave de API configurada)"
+        return regras("nenhuma chave de API configurada")
     except anthropic.AuthenticationError:
-        return [explicar_por_regras(d) for d in divergencias], "regras (chave de API inválida)"
+        return regras("chave de API inválida")
     except anthropic.APIConnectionError as e:
-        return [explicar_por_regras(d) for d in divergencias], f"regras (sem conexão com a API: {e})"
+        return regras(f"sem conexão com a API: {e}")
     except anthropic.RateLimitError:
-        return [explicar_por_regras(d) for d in divergencias], "regras (limite de uso da API)"
+        return regras("limite de uso da API")
     except anthropic.APIStatusError as e:
-        return [explicar_por_regras(d) for d in divergencias], f"regras (erro {e.status_code} da API)"
+        return regras(f"erro {e.status_code} da API")
+    uso = medir_uso(resposta.usage, MODELO, time.perf_counter() - inicio)
 
     if resposta.stop_reason == "refusal" or resposta.parsed_output is None:
-        return [explicar_por_regras(d) for d in divergencias], "regras (a IA não respondeu)"
+        final, origem, _ = regras("a IA não respondeu")
+        return final, origem, uso
 
     recebidas = {e.divergencia_id: e for e in resposta.parsed_output.explicacoes}
     # Garante uma explicação por divergência, mesmo que a IA pule alguma.
     final = [recebidas.get(d.id) or explicar_por_regras(d) for d in divergencias]
     faltaram = sum(1 for d in divergencias if d.id not in recebidas)
     origem = f"IA ({MODELO})" + (f", {faltaram} completadas por regras" if faltaram else "")
-    return final, origem
+    return final, origem, uso
 
 
-def explicar(divergencias: list[Divergencia], usar_ia: bool) -> tuple[list[Explicacao], str]:
+def explicar(divergencias: list[Divergencia], usar_ia: bool) -> tuple[list[Explicacao], str, dict | None]:
+    """Devolve (explicações, origem, uso). `uso` traz tokens, custo e tempo quando a IA foi chamada."""
     if not divergencias:
-        return [], "nenhuma divergência"
+        return [], "nenhuma divergência", None
     if usar_ia:
         return explicar_com_ia(divergencias)
-    return [explicar_por_regras(d) for d in divergencias], "regras"
+    return [explicar_por_regras(d) for d in divergencias], "regras", None

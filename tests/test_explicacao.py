@@ -16,6 +16,9 @@ DIVS = [
 ]
 
 
+USO = SimpleNamespace(input_tokens=1000, output_tokens=500)
+
+
 class ClienteFalso:
     def __init__(self, resposta):
         self.chamadas = []
@@ -35,11 +38,13 @@ def test_ia_completa_divergencias_que_ela_pulou(monkeypatch):
     so_uma = Resposta(explicacoes=[Explicacao(divergencia_id="D02", prioridade="alta",
                                               causa_provavel="desconto_fora_da_nota",
                                               explicacao="x", acao="y")])
-    falso = ClienteFalso(SimpleNamespace(stop_reason="end_turn", parsed_output=so_uma))
+    falso = ClienteFalso(SimpleNamespace(stop_reason="end_turn", parsed_output=so_uma, usage=USO))
     monkeypatch.setattr(anthropic, "Anthropic", lambda: falso)
 
-    resultado, origem = explicar(DIVS, usar_ia=True)
+    resultado, origem, uso = explicar(DIVS, usar_ia=True)
 
+    assert uso["tokens_entrada"] == 1000
+    assert uso["custo_usd"] == (1000 * 4 + 500 * 20) / 1_000_000
     assert [e.divergencia_id for e in resultado] == ["D01", "D02"]
     assert resultado[0].causa_provavel == "nota_nao_emitida"      # veio das regras
     assert "1 completadas por regras" in origem
@@ -50,8 +55,18 @@ def test_ia_completa_divergencias_que_ela_pulou(monkeypatch):
 
 
 def test_recusa_volta_para_regras(monkeypatch):
-    falso = ClienteFalso(SimpleNamespace(stop_reason="refusal", parsed_output=None))
+    falso = ClienteFalso(SimpleNamespace(stop_reason="refusal", parsed_output=None, usage=USO))
     monkeypatch.setattr(anthropic, "Anthropic", lambda: falso)
-    resultado, origem = explicar(DIVS, usar_ia=True)
+    resultado, origem, _ = explicar(DIVS, usar_ia=True)
     assert origem.startswith("regras")
     assert len(resultado) == 2
+
+
+def test_sem_chave_volta_para_regras(monkeypatch):
+    monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+    monkeypatch.delenv("ANTHROPIC_AUTH_TOKEN", raising=False)
+    monkeypatch.setattr(anthropic, "Anthropic", lambda: (_ for _ in ()).throw(
+        TypeError("Could not resolve authentication method")))
+    resultado, origem, uso = explicar(DIVS, usar_ia=True)
+    assert origem == "regras (nenhuma chave de API configurada)"
+    assert uso is None and len(resultado) == 2

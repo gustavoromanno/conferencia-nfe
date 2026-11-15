@@ -2,6 +2,7 @@
 from collections import defaultdict
 from decimal import Decimal
 
+from .leitura import EVENTO_ACEITO
 from .modelos import Divergencia, Nota, Pedido
 
 
@@ -30,8 +31,12 @@ def conferir(pedidos: list[Pedido], notas: list[Nota]) -> list[Divergencia]:
         if nota.pedido_id in ids_pedidos:
             por_pedido[nota.pedido_id].append(nota)
         elif nota.situacao == "AUTORIZADA":
-            achados.append(("NOTA_SEM_PEDIDO", nota.pedido_id, [nota.chave],
-                            {"valor_nota": nota.valor, "texto_pedido_na_nota": nota.pedido_id}))
+            achados.append(("NOTA_SEM_PEDIDO", nota.pedido_id, [nota.chave], {
+                "valor_nota": nota.valor,
+                "emissao": nota.emissao.isoformat(),
+                "texto_pedido_na_nota": nota.pedido_id,
+                "texto_complementar": nota.texto_complementar,
+            }))
 
     for pedido in pedidos:
         notas_pedido = por_pedido.get(pedido.pedido_id, [])
@@ -40,14 +45,16 @@ def conferir(pedidos: list[Pedido], notas: list[Nota]) -> list[Divergencia]:
 
         if pedido.status == "CANCELADO":
             if autorizadas:
+                rejeitados = [f"{e['descricao'] or e['tipo']}: {e['cstat']} {e['motivo']}"
+                              for n in autorizadas for e in n.eventos if e["cstat"] not in EVENTO_ACEITO]
                 achados.append(("NOTA_PEDIDO_CANCELADO", pedido.pedido_id, [n.chave for n in autorizadas],
-                                {"valor_nota": autorizadas[0].valor}))
+                                {"valor_nota": autorizadas[0].valor, "eventos_rejeitados": rejeitados}))
             continue
 
         if not autorizadas:
             tipo = "NOTA_CANCELADA" if canceladas else "PEDIDO_SEM_NOTA"
             achados.append((tipo, pedido.pedido_id, [n.chave for n in canceladas],
-                            {"valor_pedido": pedido.valor_total}))
+                            {"valor_pedido": pedido.valor_total, "data_hora_pedido": pedido.data_hora.isoformat()}))
             continue
 
         if len(autorizadas) > 1:

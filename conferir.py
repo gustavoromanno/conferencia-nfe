@@ -26,13 +26,14 @@ def main() -> None:
     pedidos = ler_pedidos(args.dados / "pedidos.csv")
     notas = ler_notas(args.dados / "notas")
     divergencias = conferir(pedidos, notas)
-    explicacoes, origem = explicar(divergencias, usar_ia=args.ia)
+    explicacoes, origem, uso = explicar(divergencias, usar_ia=args.ia)
 
     args.saida.mkdir(parents=True, exist_ok=True)
     (args.saida / "relatorio.html").write_text(
         gerar_html(divergencias, explicacoes, origem, len(pedidos), len(notas)), encoding="utf-8")
     resultado = {
         "origem_explicacoes": origem,
+        "uso": uso,
         "divergencias": [asdict(d) for d in divergencias],
         "explicacoes": [e.model_dump() for e in explicacoes],
     }
@@ -42,6 +43,10 @@ def main() -> None:
 
     print(f"{len(pedidos)} pedidos, {len(notas)} notas, {len(divergencias)} divergências.")
     print(f"Explicações: {origem}")
+    if uso:
+        custo = f"US$ {uso['custo_usd']:.4f}" if uso["custo_usd"] is not None else "custo desconhecido"
+        print(f"Uso da IA: {uso['tokens_entrada']} tokens de entrada, {uso['tokens_saida']} de saída, "
+              f"{custo}, {uso['segundos']} s")
     print(f"Relatório: {args.saida / 'relatorio.html'}")
 
 

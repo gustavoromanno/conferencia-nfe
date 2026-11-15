@@ -1,0 +1,28 @@
+name: testes
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - name: Testes unitários e de ponta a ponta
+        run: python -m pytest -q
+      - name: Avaliação no conjunto básico (regras)
+        run: |
+          python gerar_dados.py dados_basico 7
+          python conferir.py --dados dados_basico --saida saida_basico
+          python avaliar.py --dados dados_basico --saida saida_basico
+      - name: Avaliação no conjunto realista (regras)
+        run: |
+          python gerar_dados.py dados_realista 7 --realista
+          python conferir.py --dados dados_realista --saida saida_realista
+          python avaliar.py --dados dados_realista --saida saida_realista

@@ -5,6 +5,15 @@ from decimal import Decimal
 
 
 @dataclass
+class Item:
+    descricao: str
+    quantidade: Decimal
+    valor_unitario: Decimal
+    valor_total: Decimal
+    codigo: str = ""
+
+
+@dataclass
 class Pedido:
     pedido_id: str
     data_hora: datetime
@@ -13,6 +22,7 @@ class Pedido:
     taxa_entrega: Decimal
     valor_total: Decimal       # o que o cliente pagou
     status: str                # CONCLUIDO ou CANCELADO
+    itens: list[Item] = field(default_factory=list)
 
 
 @dataclass
@@ -26,6 +36,10 @@ class Nota:
     pedido_id: str | None      # lido do campo de informações complementares
     situacao: str              # AUTORIZADA ou CANCELADA
     arquivo: str
+    itens: list[Item] = field(default_factory=list)            # det/prod
+    texto_complementar: str = ""                               # infCpl original
+    eventos: list[dict] = field(default_factory=list)          # eventos da SEFAZ (cancelamento etc.)
+    arquivos_repetidos: list[str] = field(default_factory=list)  # mesmo XML em outro arquivo
 
 
 @dataclass

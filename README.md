@@ -1,5 +1,7 @@
 # Conferência de notas fiscais para restaurantes
 
+[![testes](https://github.com/gustavoromanno/conferencia-nfe/actions/workflows/testes.yml/badge.svg)](https://github.com/gustavoromanno/conferencia-nfe/actions/workflows/testes.yml)
+
 Agente que cruza os **pedidos de delivery** de um restaurante com os **XMLs das notas fiscais (NFC-e)** emitidas, encontra o que não bate e explica cada problema em linguagem simples, com prioridade e próximo passo.
 
 > Todos os dados são **fictícios**, gerados por `gerar_dados.py`.
@@ -16,7 +18,7 @@ pedidos.csv ─┐
 notas/*.xml ─┘    (regras em código)   (números calculados)   (Claude ou regras)
 ```
 
-1. **Leitura** (`leitura.py`): lê o CSV de pedidos e os XMLs no layout da NF-e 4.00 (chave de acesso, valores do `ICMSTot`, situação no `protNFe`, número do pedido no `infCpl`).
+1. **Leitura** (`leitura.py`): lê o CSV de pedidos (e dos itens) e os XMLs no layout da NF-e 4.00: chave de acesso, itens (`det/prod`), valores do `ICMSTot`, situação no `protNFe` e número do pedido no `infCpl`, escrito de vários jeitos ("Ped. 48101", "#48101", "PEDIDO Nº 48101"). Também lê os **eventos de cancelamento** (`procEventoNFe`), que a SEFAZ devolve em arquivo separado, e conta o mesmo XML baixado duas vezes como uma nota só.
 2. **Cruzamento** (`cruzamento.py`): regras determinísticas que encontram 7 tipos de divergência:
 
    | Tipo | Quando |
@@ -44,32 +46,65 @@ Proteções:
 
 `gerar_dados.py` planta erros conhecidos e grava o gabarito. `avaliar.py` mede:
 - **detecção**: recall e precisão por tipo de divergência;
-- **explicação**: em quantas divergências encontradas a causa provável bate com a causa plantada.
+- **explicação**: em quantas divergências encontradas a causa provável bate com a causa plantada, com o acerto por causa e a lista de cada erro.
 
-O gerador também cria **armadilhas** que não podem ser apontadas como erro: nota cancelada e substituída por outra, e pedido cancelado com nota também cancelada.
+São dois conjuntos de dados fictícios:
 
-Resultado com as regras, 5 sementes diferentes (120 pedidos, cerca de 120 notas e 21 erros plantados em cada):
+| | Básico | Realista |
+|---|---|---|
+| Pedidos / notas | 120 / ~122 | 116 / ~118 (+ eventos) |
+| Divergências plantadas | 21 | 33 |
+| Número do pedido na nota | sempre "Pedido #48101" | 6 formatos, misturados ao texto de tributos aproximados (IBPT) |
+| Cancelamento | `cStat 101` no próprio XML | evento separado (`procEventoNFe`), inclusive cancelamento **rejeitado** por prazo |
+| Itens na nota | sim | sim, com desconto rateado entre os itens |
+| Erros novos | — | arredondamento no rateio, item lançado duas vezes, item faltando, preço desatualizado no emissor, nota sem desconto e sem taxa, número do pedido errado ou ausente |
+| Armadilhas (não são erro) | nota cancelada e substituída; pedido e nota cancelados | as do básico + o mesmo XML baixado duas vezes + diferença que coincide com o desconto, mas é um item a mais |
 
-| | Resultado |
-|---|---|
-| Detecção (recall) | 100% em todas |
-| Detecção (precisão) | 100% em todas |
-| Causa provável (regras) | 21/21 |
+### O que o conjunto realista revelou
 
-**Limites, com honestidade:** os dados são sintéticos e foram gerados junto com as regras, então 100% aqui mostra que as regras fazem o que prometem, não que elas cobrem o mundo real. Próximos passos: testar com XMLs reais anonimizados, tratar cancelamento como evento separado (como a SEFAZ faz de fato) e medir as explicações da IA contra as das regras no mesmo gabarito.
+Rodei o código **antes de qualquer correção** no conjunto realista:
+
+- o programa **quebrava** ao encontrar um XML de evento de cancelamento;
+- sem os eventos, a detecção caía para **recall 36% e precisão 6%**: 195 alarmes para 33 problemas reais, porque a leitura só entendia o formato "Pedido #48101".
+
+Corrigi a **leitura** (formatos do número do pedido, eventos da SEFAZ, XML repetido) e não mudei as regras de detecção. Depois da correção, nas sementes 1 a 5 de cada conjunto:
+
+| | Básico | Realista |
+|---|---|---|
+| Detecção (recall) | 100% | 100% |
+| Detecção (precisão) | 100% | 100% |
+| Causa provável pelas **regras** | 21/21 | **17/33** |
+| Causa provável pela **IA** | *pendente* | *pendente* |
+
+### Onde as regras erram (de propósito)
+
+As regras que sugerem a causa foram **congeladas** na versão do conjunto básico: comparam a diferença com o desconto e com a taxa de entrega, e só. Não acrescentei uma regra para cada erro novo, porque o objetivo do conjunto realista é medir o que acontece com um caso que ninguém previu. Na semente 1, as regras erram em 16 de 33:
+
+| Causa real | Regras | Por quê |
+|---|---|---|
+| Número do pedido errado ou ausente na nota | 0/4 | viram duas divergências soltas (nota sem pedido e pedido sem nota); ligar as duas exige olhar valor e horário |
+| Item lançado duas vezes | 0/3 | numa delas, o item custa exatamente o valor do desconto, e a regra conclui "desconto fora da nota" |
+| Preço desatualizado no emissor | 0/2 | numa delas, a diferença coincide com a taxa de entrega |
+| Item faltando, arredondamento, desconto e taxa juntos | 0/6 | a regra responde "outra" |
+| Cancelamento rejeitado pela SEFAZ | 0/1 | a regra não olha os eventos |
+
+Parte disso daria para resolver com mais regras (desconto e taxa juntos, arredondamento de 1 centavo). A outra parte pede investigação: abrir os itens da nota e do pedido, que usam nomes diferentes ("Coca-Cola 2L" no app, "REFRIG COCA COLA 2L" no emissor), ou cruzar divergências entre si. É aí que a IA precisa provar que vale o custo, e é o que a próxima etapa mede.
+
+**Limites, com honestidade:** os dois conjuntos são sintéticos e foram escritos por quem escreveu as regras. O conjunto realista tem casos que as regras de causa não foram ajustadas para ver, mas ainda é um gerador meu. O próximo passo é testar com XMLs reais anonimizados.
 
 ## Como rodar
 
 ```bash
 pip install -r requirements.txt
-python gerar_dados.py dados          # cria dados fictícios
-python conferir.py --dados dados     # explicações por regras
-python avaliar.py                    # mede contra o gabarito
-pytest                               # testes
+python gerar_dados.py dados                 # conjunto básico
+python gerar_dados.py dados 7 --realista    # conjunto realista (mais difícil)
+python conferir.py --dados dados            # explicações por regras
+python avaliar.py                           # mede contra o gabarito
+python -m pytest                            # testes
 
 # com o Claude
 export ANTHROPIC_API_KEY=...
-python conferir.py --dados dados --ia
+python conferir.py --dados dados --ia        # mostra tokens, custo e tempo
 python avaliar.py
 ```
 
@@ -78,7 +113,7 @@ O relatório fica em `saida/relatorio.html`.
 ## Simplificações
 
 - XML reduzido aos campos usados na conferência, no namespace oficial da NF-e.
-- Cancelamento representado pelo `cStat 101` no próprio arquivo. Na prática, ele vem num evento separado.
+- No conjunto básico, o cancelamento é o `cStat 101` no próprio arquivo; no realista, vem como evento separado, como na SEFAZ.
 - O número do pedido é lido do campo de informações complementares (`infCpl`).
 
 ## Como foi construído
