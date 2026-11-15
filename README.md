@@ -67,14 +67,17 @@ Rodei o código **antes de qualquer correção** no conjunto realista:
 - o programa **quebrava** ao encontrar um XML de evento de cancelamento;
 - sem os eventos, a detecção caía para **recall 36% e precisão 6%**: 195 alarmes para 33 problemas reais, porque a leitura só entendia o formato "Pedido #48101".
 
-Corrigi a **leitura** (formatos do número do pedido, eventos da SEFAZ, XML repetido) e não mudei as regras de detecção. Depois da correção, nas sementes 1 a 5 de cada conjunto:
+Corrigi a **leitura** (formatos do número do pedido, eventos da SEFAZ, XML repetido) e não mudei as regras de detecção. Depois da correção, nas sementes 1 a 5 de cada conjunto (soma das divergências; gerado por `python comparar.py --ia`):
 
 | | Básico | Realista |
 |---|---|---|
 | Detecção (recall) | 100% | 100% |
 | Detecção (precisão) | 100% | 100% |
-| Causa provável pelas **regras** | 21/21 | **17/33** |
-| Causa provável pela **IA** | *pendente* | *pendente* |
+| Causa provável pelas **regras** | 105/105 (100%) | **85/165 (52%)** |
+| Causa provável pela **IA** | 105/105 (100%) | **134/165 (81%)** |
+| Custo da IA por conferência (claude-opus-5-5) | US$ 0,082 | US$ 0,132 |
+| Tempo da IA por conferência | 25 s | 38 s |
+| Tokens por conferência (entrada / saída) | 5149 / 3074 | 7831 / 5011 |
 
 ### Onde as regras erram (de propósito)
 
@@ -88,7 +91,30 @@ As regras que sugerem a causa foram **congeladas** na versão do conjunto básic
 | Item faltando, arredondamento, desconto e taxa juntos | 0/6 | a regra responde "outra" |
 | Cancelamento rejeitado pela SEFAZ | 0/1 | a regra não olha os eventos |
 
-Parte disso daria para resolver com mais regras (desconto e taxa juntos, arredondamento de 1 centavo). A outra parte pede investigação: abrir os itens da nota e do pedido, que usam nomes diferentes ("Coca-Cola 2L" no app, "REFRIG COCA COLA 2L" no emissor), ou cruzar divergências entre si. É aí que a IA precisa provar que vale o custo, e é o que a próxima etapa mede.
+Parte disso daria para resolver com mais regras (desconto e taxa juntos, arredondamento de 1 centavo). A outra parte pede investigação: abrir os itens da nota e do pedido, que usam nomes diferentes ("Coca-Cola 2L" no app, "REFRIG COCA COLA 2L" no emissor), ou cruzar divergências entre si. É aí que a IA precisa provar que vale o custo.
+
+### O que a IA acrescentou, e onde ainda erra
+
+No conjunto realista, por causa, nas 5 sementes:
+
+| Causa real | Regras | IA |
+|---|---|---|
+| Arredondamento no rateio | 0/10 | **10/10** |
+| Desconto e taxa fora da nota | 0/10 | **10/10** |
+| Cancelamento rejeitado pela SEFAZ | 0/5 | **5/5** |
+| Item faltando na nota | 0/10 | **9/10** |
+| Preço desatualizado no emissor | 0/10 | 7/10 |
+| Item lançado duas vezes | 0/15 | 8/15 |
+| Número do pedido errado ou ausente na nota | 0/20 | 10/20 |
+| Nota sem vínculo com pedido (venda de balcão) | **10/10** | 0/10 |
+| Demais causas (as do conjunto básico) | 75/75 | 75/75 |
+
+- **Onde a IA ganhou:** casos que pedem conta ou leitura dos eventos (arredondamento de centavos, desconto e taxa juntos, cancelamento rejeitado) e casos em que comparar os itens do pedido com os da nota resolve (item faltando, preço desatualizado).
+- **Número do pedido:** em cada semente há dois casos (um com o número errado, outro sem número). A IA liga a nota sem pedido ao pedido sem nota em um deles e trata o outro como "nota sem vínculo". Provavelmente liga o número com dígito trocado e não o ausente, mas isso ainda precisa ser confirmado nas explicações.
+- **Item lançado duas vezes:** acerta pouco mais da metade. Nos erros, responde "outra", e uma vez confundiu com preço desatualizado. Em nenhum caso caiu na armadilha do desconto, que as regras não evitam.
+- **Piorou em um ponto:** nas notas avulsas de balcão, que as regras acertam, a IA responde "outra" em todas. Ainda não li as explicações para saber se ela reconheceu a venda de balcão e só não achou que a categoria servia, ou se errou de fato. A categoria precisa de uma descrição mais clara no prompt.
+
+**Custo:** cerca de US$ 0,13 e 38 s por conferência no realista, contra zero das regras. A IA subiu o acerto da causa de 52% para 81%. A detecção continua nas regras, então o custo da IA só paga a explicação.
 
 **Limites, com honestidade:** os dois conjuntos são sintéticos e foram escritos por quem escreveu as regras. O conjunto realista tem casos que as regras de causa não foram ajustadas para ver, mas ainda é um gerador meu. O próximo passo é testar com XMLs reais anonimizados.
 
