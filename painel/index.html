@@ -57,6 +57,11 @@ h1, h2, h3 { text-wrap: balance; margin: 0; }
 .marca h1 { font-size: clamp(24px, 3.2vw, 32px); font-weight: 600; letter-spacing: -.02em; color: #fff; display: flex; align-items: center; gap: 12px; }
 .selo-nfe { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: .04em; border: 1px solid var(--sobreverde2); color: var(--sobreverde); border-radius: 6px; padding: 2px 7px; }
 .marca a { color: var(--sobreverde); font-size: 14px; text-underline-offset: 3px; }
+.topo-dir { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.tema { display: flex; gap: 2px; border: 1px solid rgba(255, 255, 255, .22); border-radius: 10px; padding: 3px; }
+.tema button { background: none; border: 0; color: var(--sobreverde2); padding: 4px 10px; border-radius: 7px; font-size: 13px; font-weight: 500; }
+.tema button[aria-pressed="true"] { background: rgba(255, 255, 255, .16); color: #fff; }
+.tema button:not([aria-pressed="true"]):hover { color: #fff; }
 .fontes { display: flex; gap: 4px; flex-wrap: wrap; background: rgba(255, 255, 255, .07); border-radius: 12px; padding: 4px; width: fit-content; max-width: 100%; }
 .fontes button { background: none; border: 0; color: var(--sobreverde); padding: 8px 14px; border-radius: 9px; font-weight: 500; }
 .fontes button[aria-pressed="true"] { background: #fff; color: #1C3B2E; }
@@ -225,7 +230,14 @@ footer a { color: var(--tinta2); }
   <div class="faixa-interna">
     <div class="marca">
       <h1>Conferência <span class="selo-nfe">NF-e · NFC-e</span></h1>
-      <a href="https://github.com/gustavoromanno/conferencia-nfe" target="_blank" rel="noopener">Código no GitHub ↗</a>
+      <div class="topo-dir">
+        <div class="tema" role="group" aria-label="Tema">
+          <button type="button" id="tema-auto" data-tema="auto" title="Segue o tema do aparelho">Automático</button>
+          <button type="button" id="tema-claro" data-tema="light">Claro</button>
+          <button type="button" id="tema-escuro" data-tema="dark">Escuro</button>
+        </div>
+        <a href="https://github.com/gustavoromanno/conferencia-nfe" target="_blank" rel="noopener">Código no GitHub ↗</a>
+      </div>
     </div>
     <div class="fontes" role="group" aria-label="Dados conferidos">
       <button type="button" id="f-realista" data-fonte="realista">Exemplo realista</button>
@@ -314,6 +326,22 @@ footer a { color: var(--tinta2); }
 (function () {
   "use strict";
   const C = window.Conferencia;
+
+  // Tema: Automático segue o aparelho; Claro e Escuro ficam guardados neste navegador.
+  function aplicarTema(tema) {
+    if (tema === "light" || tema === "dark") document.documentElement.setAttribute("data-theme", tema);
+    else document.documentElement.removeAttribute("data-theme");
+    for (const b of document.querySelectorAll(".tema button")) b.setAttribute("aria-pressed", String(b.dataset.tema === (tema || "auto")));
+  }
+  let temaGuardado = null;
+  try { temaGuardado = localStorage.getItem("conferencia-tema"); } catch (e) { /* sem armazenamento */ }
+  aplicarTema(temaGuardado || "auto");
+  document.querySelector(".tema").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-tema]");
+    if (!b) return;
+    aplicarTema(b.dataset.tema);
+    try { localStorage.setItem("conferencia-tema", b.dataset.tema); } catch (e) { /* sem armazenamento */ }
+  });
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const brl = C.brl;
