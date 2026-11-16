@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe31261111222333000181650010000010031016190767" versao="4.00">
+      <ide><cUF>31</cUF><mod>65</mod><serie>1</serie><nNF>1003</nNF><dhEmi>2026-11-02T12:22:00</dhEmi></ide>
+      <emit><CNPJ>11222333000181</CNPJ><xNome>Cantina Exemplo Ltda (fictícia)</xNome></emit>
+      <det nItem="1"><prod><cProd>201</cProd><cEAN>SEM GTIN</cEAN><xProd>PORCAO BATATA M</xProd><NCM>21069090</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>1.0000</qCom><vUnCom>18.5000000000</vUnCom><vProd>18.50</vProd></prod></det>
+      <det nItem="2"><prod><cProd>102</cProd><cEAN>SEM GTIN</cEAN><xProd>X SALADA</xProd><NCM>21069090</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>1.0000</qCom><vUnCom>27.9000000000</vUnCom><vProd>27.90</vProd></prod></det>
+      <total><ICMSTot><vProd>46.40</vProd><vDesc>0.00</vDesc><vFrete>7.50</vFrete><vNF>53.90</vNF></ICMSTot></total>
+      <infAdic><infCpl>pedido 48102 | Trib aprox R$ 15,75 Fed e Est. Fonte: IBPT</infCpl></infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00"><infProt><chNFe>31261111222333000181650010000010031016190767</chNFe><nProt>131260000036953</nProt><cStat>100</cStat></infProt></protNFe>
+</nfeProc>

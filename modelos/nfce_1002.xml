@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nfeProc xmlns="http://www.portalfiscal.inf.br/nfe" versao="4.00">
+  <NFe>
+    <infNFe Id="NFe31261111222333000181650010000010021738492184" versao="4.00">
+      <ide><cUF>31</cUF><mod>65</mod><serie>1</serie><nNF>1002</nNF><dhEmi>2026-11-02T11:51:00</dhEmi></ide>
+      <emit><CNPJ>11222333000181</CNPJ><xNome>Cantina Exemplo Ltda (fictícia)</xNome></emit>
+      <det nItem="1"><prod><cProd>401</cProd><cEAN>SEM GTIN</cEAN><xProd>PIZZA CALABRESA G</xProd><NCM>21069090</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>3.0000</qCom><vUnCom>54.9000000000</vUnCom><vProd>164.70</vProd></prod></det>
+      <det nItem="2"><prod><cProd>304</cProd><cEAN>SEM GTIN</cEAN><xProd>AGUA MINERAL S/GAS</xProd><NCM>21069090</NCM><CFOP>5102</CFOP><uCom>UN</uCom><qCom>1.0000</qCom><vUnCom>4.0000000000</vUnCom><vProd>4.00</vProd></prod></det>
+      <total><ICMSTot><vProd>168.70</vProd><vDesc>0.00</vDesc><vFrete>0.00</vFrete><vNF>168.70</vNF></ICMSTot></total>
+      <infAdic><infCpl>Trib aprox R$ 13,53 Fed e Est. Fonte: IBPT. #48101</infCpl></infAdic>
+    </infNFe>
+  </NFe>
+  <protNFe versao="4.00"><infProt><chNFe>31261111222333000181650010000010021738492184</chNFe><nProt>131260000089485</nProt><cStat>100</cStat></infProt></protNFe>
+</nfeProc>
