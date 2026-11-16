@@ -42,6 +42,14 @@ Proteções:
 - uma única chamada para todas as divergências, com `effort: low` (tarefa simples, custo baixo);
 - se a IA recusar, falhar ou pular alguma divergência, o código completa com as regras: o relatório nunca fica incompleto.
 
+## Painel
+
+`painel/index.html` é a interface para quem não quer usar o terminal. Abra no navegador e escolha:
+- **Exemplo realista** ou **Exemplo básico**: os mesmos conjuntos da avaliação abaixo, com o gabarito. O filtro "Causa errada pelas regras" mostra cada caso em que as regras erram, e o detalhe põe os itens do aplicativo ao lado dos itens da nota.
+- **Meus arquivos**: arraste o `pedidos.csv` e os XMLs, soltos ou num `.zip`. Os arquivos são lidos no próprio navegador e não são enviados para lugar nenhum. O formato está em [`modelos/`](modelos/).
+
+O painel roda as regras em JavaScript, traduzidas do Python. Para os dois não divergirem, `tests/test_painel.py` abre o painel num Chromium e compara o resultado com o do Python, divergência por divergência, nos dois conjuntos e em três sementes. As explicações pelo Claude continuam só na linha de comando, porque a chave de API não pode ficar numa página.
+
 ## Avaliação
 
 `gerar_dados.py` planta erros conhecidos e grava o gabarito. `avaliar.py` mede:
@@ -96,6 +104,7 @@ Parte disso daria para resolver com mais regras (desconto e taxa juntos, arredon
 
 ```bash
 pip install -r requirements.txt
+python painel/gerar_exemplos.py               # atualiza os exemplos do painel e os modelos
 python gerar_dados.py dados                 # conjunto básico
 python gerar_dados.py dados 7 --realista    # conjunto realista (mais difícil)
 python conferir.py --dados dados            # explicações por regras

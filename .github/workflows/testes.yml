@@ -13,7 +13,13 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt playwright
+      - name: Navegador para o teste de paridade do painel
+        run: python -m playwright install --with-deps chromium
+      - name: Exemplos do painel estão atualizados
+        run: |
+          python painel/gerar_exemplos.py
+          git diff --exit-code painel/exemplos.js modelos/
       - name: Testes unitários e de ponta a ponta
         run: python -m pytest -q
       - name: Avaliação no conjunto básico (regras)
