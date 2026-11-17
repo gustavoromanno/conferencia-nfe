@@ -2,6 +2,8 @@
 
 [![testes](https://github.com/gustavoromanno/conferencia-nfe/actions/workflows/testes.yml/badge.svg)](https://github.com/gustavoromanno/conferencia-nfe/actions/workflows/testes.yml)
 
+**[Abrir o painel](https://gustavoromanno.github.io/conferencia-nfe/)** · teste com os exemplos ou com os seus próprios arquivos.
+
 Agente que cruza os **pedidos de delivery** de um restaurante com os **XMLs das notas fiscais (NFC-e)** emitidas, encontra o que não bate e explica cada problema em linguagem simples, com prioridade e próximo passo.
 
 > Todos os dados são **fictícios**, gerados por `gerar_dados.py`.
@@ -43,6 +45,8 @@ Proteções:
 - se a IA recusar, falhar ou pular alguma divergência, o código completa com as regras: o relatório nunca fica incompleto.
 
 ## Painel
+
+**Abra no navegador: https://gustavoromanno.github.io/conferencia-nfe/** (não precisa instalar nada).
 
 `painel/index.html` é a interface para quem não quer usar o terminal. Abra no navegador e escolha:
 - **Exemplo realista** ou **Exemplo básico**: os mesmos conjuntos da avaliação abaixo, com o gabarito. O filtro "Causa errada pelas regras" mostra cada caso em que as regras erram, e o detalhe põe os itens do aplicativo ao lado dos itens da nota.
