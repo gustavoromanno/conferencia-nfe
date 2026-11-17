@@ -37,7 +37,8 @@
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-body { background: var(--papel); color: var(--tinta); font-family: var(--texto); font-size: 15px; line-height: 1.5; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--papel); color: var(--tinta); font-family: var(--texto); font-size: 15px; line-height: 1.5; }
 .faixa-interna, main, footer {
   width: 100%; max-width: 1240px; margin-inline: auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
